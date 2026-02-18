@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>朝飯ログ</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; margin: 24px; line-height: 1.5; }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #666; font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-top: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px; }
+    .btns { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #bbb; background: #fff; cursor: pointer; }
+    button.primary { border-color: #222; font-weight: 700; }
+    button.danger { border-color: #c00; color: #c00; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .kpi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .kpi .item { border: 1px solid #eee; border-radius: 10px; padding: 10px; }
+    .kpi .label { font-size: 12px; color: #666; }
+    .kpi .val { font-size: 18px; font-weight: 800; margin-top: 2px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; font-size: 14px; }
+    th { font-size: 12px; color: #666; }
+    .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 10px; }
+    .day { border: 1px solid #eee; border-radius: 10px; padding: 8px; min-height: 64px; }
+    .day .d { font-size: 12px; color: #666; }
+    .day .m { font-size: 18px; font-weight: 800; margin-top: 4px; }
+    .ok { border-color: #222; }
+    .ng { border-color: #ddd; opacity: 0.7; }
+    .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid #ddd; margin-left: 6px; }
+    .right { display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap; }
+    .small { font-size: 12px; color: #666; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="right">
+      <div>
+        <h1>朝飯ログ</h1>
+        <div class="muted">「食べた」押した瞬間の日時を記録して、継続とサボりを見える化するやつ。</div>
+      </div>
+      <div class="small mono" id="now"></div>
+    </div>
+
+    <div class="btns">
+      <button class="primary" id="btnEat">朝飯食べた ✅</button>
+      <button id="btnUndo">今日の記録を取り消す</button>
+      <button class="danger" id="btnReset">全データ削除</button>
+    </div>
+
+    <div class="row">
+      <div class="card">
+        <div class="right">
+          <div>
+            <strong>統計</strong>
+            <span class="badge" id="tzBadge"></span>
+          </div>
+          <div class="small" id="startInfo"></div>
+        </div>
+
+        <div class="kpi" style="margin-top:10px;">
+          <div class="item">
+            <div class="label">開始日</div>
+            <div class="val" id="kpiStart">-</div>
+          </div>
+          <div class="item">
+            <div class="label">記録した日数（累計）</div>
+            <div class="val" id="kpiTotalDays">0</div>
+          </div>
+          <div class="item">
+            <div class="label">サボった日数（開始〜今日）</div>
+            <div class="val" id="kpiMissed">0</div>
+          </div>
+          <div class="item">
+            <div class="label">連続記録（今 / 最高）</div>
+            <div class="val" id="kpiStreak">0 / 0</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <strong>直近28日</strong>
+          <div class="cal" id="calendar"></div>
+          <div class="small" style="margin-top:8px;">✅=食べた / ❌=サボり（記録なし）</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="right">
+          <strong>履歴</strong>
+          <span class="small">最新が上</span>
+        </div>
+        <div style="margin-top:10px; max-height: 420px; overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>日付</th>
+                <th>時刻</th>
+              </tr>
+            </thead>
+            <tbody id="logTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+      <strong>メモ</strong>
+      <div class="small">
+        データはこのPC/ブラウザの <span class="mono">localStorage</span> に保存。別PCやスマホには同期せえへん。<br/>
+        将来クラウド同期したいなら（Firebase/Supabase等）に切り替える。
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const KEY = "breakfast_log_v1";
+
+  const $ = (id) => document.getElementById(id);
+
+  function pad(n){ return String(n).padStart(2,"0"); }
+
+  // ローカル日付キー（例: 2026-02-18）を作る（TZは端末のローカル）
+  function toDayKey(d){
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+
+  function fmtDateJP(dayKey){
+    const [y,m,da] = dayKey.split("-").map(Number);
+    return `${y}年${m}月${da}日`;
+  }
+
+  function fmtTimeJP(d){
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+
+  function load(){
+    try {
+      const raw = localStorage.getItem(KEY);
+      if(!raw) return { events: [] };
+      const data = JSON.parse(raw);
+      if(!data || !Array.isArray(data.events)) return { events: [] };
+      return data;
+    } catch {
+      return { events: [] };
+    }
+  }
+
+  function save(data){
+    localStorage.setItem(KEY, JSON.stringify(data));
+  }
+
+  // events: [{ts:number, dayKey:string}]
+  function addEvent(){
+    const data = load();
+    const now = new Date();
+    const dayKey = toDayKey(now);
+
+    // 1日に複数押しても「最新1件」だけ残す（重複ウザいやろ）
+    const filtered = data.events.filter(e => e.dayKey !== dayKey);
+    filtered.push({ ts: now.getTime(), dayKey });
+    filtered.sort((a,b) => a.ts - b.ts);
+
+    save({ events: filtered });
+  }
+
+  function removeToday(){
+    const data = load();
+    const todayKey = toDayKey(new Date());
+    const filtered = data.events.filter(e => e.dayKey !== todayKey);
+    save({ events: filtered });
+  }
+
+  function resetAll(){
+    localStorage.removeItem(KEY);
+  }
+
+  function uniqueDayKeys(events){
+    const set = new Set(events.map(e => e.dayKey));
+    return Array.from(set).sort();
+  }
+
+  function dayRange(startKey, endKey){
+    // startKey〜endKey（両端含む）の配列
+    const [sy,sm,sd] = startKey.split("-").map(Number);
+    const [ey,em,ed] = endKey.split("-").map(Number);
+    const start = new Date(sy, sm-1, sd);
+    const end = new Date(ey, em-1, ed);
+
+    const out = [];
+    const cur = new Date(start);
+    while(cur <= end){
+      out.push(toDayKey(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+  }
+
+  function calcStats(events){
+    const days = uniqueDayKeys(events);
+    if(days.length === 0){
+      return {
+        start: null,
+        totalDays: 0,
+        missed: 0,
+        streakNow: 0,
+        streakBest: 0,
+        daysSet: new Set()
+      };
+    }
+
+    const startKey = days[0];
+    const todayKey = toDayKey(new Date());
+    const allDays = dayRange(startKey, todayKey);
+
+    const daySet = new Set(days);
+    const totalDays = daySet.size;
+
+    let missed = 0;
+    for(const k of allDays){
+      if(!daySet.has(k)) missed++;
+    }
+
+    // 最高ストリーク：allDaysを走査して連続数の最大
+    let best = 0, cur = 0;
+    for(const k of allDays){
+      if(daySet.has(k)){
+        cur++;
+        if(cur > best) best = cur;
+      } else {
+        cur = 0;
+      }
+    }
+
+    // 今のストリーク：今日から遡って連続
+    let streakNow = 0;
+    // allDaysの末尾（today）から逆
+    for(let i = allDays.length - 1; i >= 0; i--){
+      if(daySet.has(allDays[i])) streakNow++;
+      else break;
+    }
+
+    return { start: startKey, totalDays, missed, streakNow, streakBest: best, daysSet: daySet };
+  }
+
+  function render(){
+    const data = load();
+    const events = data.events.slice().sort((a,b) => b.ts - a.ts); // 最新が上
+
+    // Now表示
+    const now = new Date();
+    $("now").textContent = `いま: ${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${fmtTimeJP(now)}`;
+
+    $("tzBadge").textContent = Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
+
+    // Stats
+    const stats = calcStats(data.events);
+    $("kpiStart").textContent = stats.start ? fmtDateJP(stats.start) : "-";
+    $("kpiTotalDays").textContent = String(stats.totalDays);
+    $("kpiMissed").textContent = String(stats.missed);
+    $("kpiStreak").textContent = `${stats.streakNow} / ${stats.streakBest}`;
+
+    $("startInfo").textContent = stats.start
+      ? `開始: ${fmtDateJP(stats.start)} 〜 今日まで`
+      : "まだ1回も記録なし。まず押し。";
+
+    // 今日取り消しボタンは、今日記録がある時だけ有効
+    const todayKey = toDayKey(new Date());
+    $("btnUndo").disabled = !stats.daysSet.has(todayKey);
+
+    // Log table
+    const tbody = $("logTable");
+    tbody.innerHTML = "";
+    events.forEach((e, idx) => {
+      const d = new Date(e.ts);
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${events.length - idx}</td>
+        <td>${fmtDateJP(e.dayKey)}</td>
+        <td>${fmtTimeJP(d)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    if(events.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="3" class="muted">まだ履歴なし。右上のボタン押したら増えるで。</td>`;
+      tbody.appendChild(tr);
+    }
+
+    // Calendar: 直近28日
+    const cal = $("calendar");
+    cal.innerHTML = "";
+
+    const daysBack = 28;
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - (daysBack - 1));
+
+    const range = [];
+    const cur = new Date(start);
+    while(cur <= end){
+      range.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    range.forEach(d => {
+      const key = toDayKey(d);
+      const box = document.createElement("div");
+      const has = stats.daysSet.has(key);
+      box.className = `day ${has ? "ok" : "ng"}`;
+      box.innerHTML = `
+        <div class="d">${pad(d.getMonth()+1)}/${pad(d.getDate())}</div>
+        <div class="m">${has ? "✅" : "❌"}</div>
+      `;
+      cal.appendChild(box);
+    });
+  }
+
+  // Events
+  $("btnEat").addEventListener("click", () => {
+    addEvent();
+    render();
+  });
+
+  $("btnUndo").addEventListener("click", () => {
+    removeToday();
+    render();
+  });
+
+  $("btnReset").addEventListener("click", () => {
+    const ok = confirm("全データ削除するで？ほんまにええん？（戻せへん）");
+    if(ok){
+      resetAll();
+      render();
+    }
+  });
+
+  // 初期描画 & 時計更新
+  render();
+  setInterval(render, 1000);
+})();
+</script>
+</body>
+</html>
