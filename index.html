@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Beer Memo - 体調×季節×料理おすすめ</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif; }
+    body { margin: 0; background: #f6f7fb; color: #111; }
+    header { padding: 18px 16px; background: white; border-bottom: 1px solid #e7e7ef; }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 6px 0 0; font-size: 12px; color: #555; }
+
+    main { max-width: 1080px; margin: 0 auto; padding: 16px; display: grid; grid-template-columns: 420px 1fr; gap: 16px; }
+    @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+
+    .card { background: white; border: 1px solid #e7e7ef; border-radius: 14px; padding: 14px; box-shadow: 0 4px 18px rgba(0,0,0,0.04); }
+    .card h2 { margin: 0 0 10px; font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    label { display: block; font-size: 12px; color: #333; margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%; box-sizing: border-box; padding: 10px 10px;
+      border: 1px solid #d8d8e6; border-radius: 10px; background: #fff;
+      font-size: 14px;
+    }
+    textarea { min-height: 76px; resize: vertical; }
+    .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    button {
+      border: 0; border-radius: 10px; padding: 10px 12px; cursor: pointer;
+      background: #111; color: white; font-size: 13px;
+    }
+    button.secondary { background: #e9e9f5; color: #111; }
+    button.danger { background: #d11; }
+    .muted { font-size: 12px; color: #666; }
+    .feedback {
+      padding: 12px; border-radius: 12px; background: #f3f4ff; border: 1px solid #dfe1ff;
+      margin-top: 10px;
+    }
+    .tag { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #f0f0f7; border: 1px solid #e3e3ef; font-size: 12px; margin: 0 6px 6px 0; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #efeff6; padding: 10px 8px; vertical-align: top; font-size: 13px; }
+    th { text-align: left; color: #333; font-size: 12px; }
+    .small { font-size: 12px; color: #555; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .pill { padding: 2px 8px; border-radius: 999px; border: 1px solid #e1e1ef; background: #fafafe; font-size: 12px; display: inline-block; }
+    .right { text-align: right; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Beer Memo（体調×季節×料理おすすめ）</h1>
+    <p>ローカル保存。まずはルールベースで“それっぽい”フィードバックを返す版。</p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>記録を追加</h2>
+
+      <div class="row">
+        <div>
+          <label>日付</label>
+          <input id="date" type="datetime-local" />
+        </div>
+        <div>
+          <label>季節</label>
+          <select id="season">
+            <option value="春">春</option>
+            <option value="夏">夏</option>
+            <option value="秋">秋</option>
+            <option value="冬">冬</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>気温（℃）</label>
+          <input id="temp" type="number" min="-10" max="45" step="0.1" placeholder="例: 18.5" />
+        </div>
+        <div>
+          <label>体調</label>
+          <select id="condition">
+            <option value="最高">最高</option>
+            <option value="普通">普通</option>
+            <option value="だるい">だるい</option>
+            <option value="疲れ気味">疲れ気味</option>
+            <option value="寝不足">寝不足</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>ビール銘柄（任意）</label>
+          <input id="brand" type="text" placeholder="例: よなよなエール" />
+        </div>
+        <div>
+          <label>スタイル</label>
+          <select id="style">
+            <option value="ラガー">ラガー</option>
+            <option value="ピルスナー">ピルスナー</option>
+            <option value="IPA">IPA</option>
+            <option value="ペールエール">ペールエール</option>
+            <option value="ヴァイツェン">ヴァイツェン</option>
+            <option value="スタウト">スタウト</option>
+            <option value="サワー">サワー</option>
+            <option value="ベルジャン">ベルジャン</option>
+            <option value="不明">不明</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row3">
+        <div>
+          <label>ABV（%）</label>
+          <input id="abv" type="number" min="0" max="20" step="0.1" placeholder="例: 5.5" />
+        </div>
+        <div>
+          <label>苦味（IBU目安）</label>
+          <input id="ibu" type="number" min="0" max="120" step="1" placeholder="例: 40" />
+        </div>
+        <div>
+          <label>満足度（1-10）</label>
+          <input id="rating" type="number" min="1" max="10" step="1" value="7" />
+        </div>
+      </div>
+
+      <div>
+        <label>感想（味/香り/余韻など）</label>
+        <textarea id="impression" placeholder="例: 柑橘の香り、苦味キレ、後味すっきり。"></textarea>
+      </div>
+
+      <div>
+        <label>メモ（料理/シーン/誰と飲んだ等）</label>
+        <textarea id="memo" placeholder="例: 唐揚げと最高。疲れてたけど回復した。"></textarea>
+      </div>
+
+      <div class="btns">
+        <button id="saveBtn">保存</button>
+        <button class="secondary" id="previewBtn">おすすめプレビュー</button>
+        <button class="secondary" id="resetBtn">入力リセット</button>
+      </div>
+
+      <div class="feedback" id="feedbackBox" style="display:none;"></div>
+      <p class="muted" style="margin-top:10px;">保存先: ブラウザの localStorage（このPCのこのブラウザ内だけ）</p>
+    </section>
+
+    <section class="card">
+      <h2>記録一覧</h2>
+
+      <div class="row">
+        <div>
+          <label>検索（銘柄/感想/メモ）</label>
+          <input id="q" type="text" placeholder="例: 唐揚げ / IPA / 柑橘" />
+        </div>
+        <div>
+          <label>並び替え</label>
+          <select id="sort">
+            <option value="new">新しい順</option>
+            <option value="old">古い順</option>
+            <option value="rating">満足度が高い順</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="btns">
+        <button class="secondary" id="exportBtn">JSONエクスポート</button>
+        <button class="secondary" id="importBtn">JSONインポート</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none;" />
+        <button class="danger" id="clearBtn">全削除</button>
+      </div>
+
+      <div id="stats" class="muted" style="margin: 10px 0;"></div>
+
+      <div style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>日付</th>
+              <th>ビール</th>
+              <th>環境/体調</th>
+              <th>感想</th>
+              <th>おすすめ</th>
+              <th class="right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="list"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+<script>
+  const LS_KEY = "beer_memo_v1";
+
+  // -------- Utilities --------
+  function nowLocalDatetimeValue() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+  }
+
+  function safeParseNum(v) {
+    if (v === "" || v === null || v === undefined) return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function loadAll() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveAll(arr) {
+    localStorage.setItem(LS_KEY, JSON.stringify(arr));
+  }
+
+  function uid() {
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+
+  // -------- Recommendation Engine (Rule-based) --------
+  function recommend(entry) {
+    const style = entry.style;
+    const temp = entry.temp;
+    const season = entry.season;
+    const condition = entry.condition;
+    const abv = entry.abv ?? 0;
+    const ibu = entry.ibu ?? 0;
+    const text = `${entry.impression || ""} ${entry.memo || ""}`.toLowerCase();
+
+    // Candidate pool with scores
+    const items = new Map(); // name -> {score, reasons[]}
+    const add = (name, score, reason) => {
+      if (!items.has(name)) items.set(name, { score: 0, reasons: [] });
+      items.get(name).score += score;
+      items.get(name).reasons.push(reason);
+    };
+
+    // Base by style
+    if (style === "IPA" || style === "ペールエール") {
+      add("唐揚げ", 3, "ホップの苦味に脂が合う");
+      add("タコス/スパイス系", 3, "柑橘×スパイスが相性良い");
+      add("ポテトフライ", 2, "苦味と塩気で止まらんやつ");
+      if (ibu >= 50) add("ブルーチーズ", 2, "強い苦味に濃厚チーズ");
+    }
+    if (style === "ラガー" || style === "ピルスナー") {
+      add("枝豆", 3, "スッキリ系は定番つまみが強い");
+      add("焼き鳥（塩）", 3, "キレに塩が合う");
+      add("餃子", 2, "炭酸感で脂を流す");
+    }
+    if (style === "ヴァイツェン") {
+      add("ソーセージ", 3, "小麦の甘みと肉が合う");
+      add("ポテサラ", 2, "まろやか同士でまとまる");
+      add("チーズ（白カビ系）", 2, "バナナ香に優しいチーズ");
+    }
+    if (style === "スタウト") {
+      add("チョコ/ブラウニー", 3, "ロースト香と甘みが合う");
+      add("牡蠣（カキフライでも）", 2, "スタウト×牡蠣は鉄板");
+      add("ビーフシチュー", 2, "濃い煮込みと相性");
+    }
+    if (style === "サワー") {
+      add("カルパッチョ", 3, "酸味が魚介に合う");
+      add("フルーツ/ヨーグルト", 2, "爽やか路線で合わせる");
+      add("生ハム", 2, "塩気×酸味");
+    }
+    if (style === "ベルジャン") {
+      add("ムール貝の白ワイン蒸し", 3, "酵母感と魚介が合う");
+      add("フライドチキン", 2, "甘みとスパイスが噛み合う");
+      add("ウォッシュチーズ", 2, "香り強め同士");
+    }
+
+    // By season / temperature
+    if (season === "夏" || (temp !== null && temp >= 25)) {
+      add("冷奴", 2, "暑い日は軽めで正解");
+      add("そうめん", 2, "スッキリでいこ");
+      add("きゅうりの浅漬け", 2, "塩気で飲める");
+    }
+    if (season === "冬" || (temp !== null && temp <= 10)) {
+      add("おでん", 2, "寒い日は温かいのが勝つ");
+      add("鍋（塩/味噌）", 2, "温かい×炭酸で最高");
+      if (abv >= 7) add("すき焼き", 1, "強めビールは甘辛にも耐える");
+    }
+    if (season === "秋") {
+      add("きのこバターソテー", 2, "香りの季節やしな");
+      add("焼き魚（秋刀魚とか）", 2, "脂×キレ");
+    }
+    if (season === "春") {
+      add("山菜天ぷら", 2, "ほろ苦×ほろ苦で大人");
+      add("菜の花のおひたし", 2, "軽い苦味が合う");
+    }
+
+    // Condition adjustments
+    if (condition === "だるい" || condition === "疲れ気味" || condition === "寝不足") {
+      add("塩むすび/おにぎり", 2, "まず胃を落ち着かせよ");
+      add("味噌汁", 2, "回復ルートに寄せる");
+      if (abv >= 7) add("チェイサー（水）", 4, "強めの日は水を挟め。マジで。");
+    }
+
+    // Keyword boosts from notes
+    if (text.includes("柑橘") || text.includes("グレープフルーツ") || text.includes("シトラス")) {
+      add("タコス/スパイス系", 2, "柑橘っぽさがスパイスに合う");
+      add("白身魚フライ", 1, "爽やか→揚げ物いける");
+    }
+    if (text.includes("スモーク") || text.includes("燻製")) {
+      add("燻製ナッツ/燻製チーズ", 3, "同系統で寄せる");
+      add("ベーコン", 2, "香りで殴り合い");
+    }
+    if (text.includes("甘い") || text.includes("キャラメル") || text.includes("チョコ")) {
+      add("チョコ/ブラウニー", 2, "甘み方向はデザート強い");
+    }
+    if (text.includes("すっきり") || text.includes("キレ")) {
+      add("枝豆", 1, "キレ系の定番");
+      add("焼き鳥（塩）", 1, "軽く塩で");
+    }
+
+    // Fallback if no items
+    if (items.size === 0) {
+      add("枝豆", 1, "迷ったら枝豆。逃げじゃない。");
+      add("唐揚げ", 1, "迷ったら唐揚げ。強い。");
+      add("チーズ", 1, "迷ったらチーズ。だいたい勝つ。");
+    }
+
+    // Pick top 3
+    const sorted = Array.from(items.entries())
+      .map(([name, v]) => ({ name, score: v.score, reasons: v.reasons }))
+      .sort((a, b) => b.score - a.score);
+
+    const top = sorted.slice(0, 3);
+
+    // Build feedback message
+    const tips = [];
+    if (abv >= 7) tips.push("ABV高めやから、飲むペース落として水も挟み。");
+    if (temp !== null && temp >= 28) tips.push("暑い日は脱水しがち。水と塩気セットでいこ。");
+    if (condition === "寝不足") tips.push("寝不足で酒は体にダメージ直撃。今日は軽めで終わっとき。");
+
+    return {
+      picks: top,
+      tips
+    };
+  }
+
+  function formatFeedback(entry, rec) {
+    const parts = [];
+    parts.push(`<div><span class="pill">おすすめ</span></div>`);
+    parts.push(`<div style="margin-top:8px;">`);
+    rec.picks.forEach((p, idx) => {
+      const reason = p.reasons[0] ? `（理由: ${escapeHtml(p.reasons[0])}）` : "";
+      parts.push(`<div style="margin:6px 0;"><b>${idx+1}. ${escapeHtml(p.name)}</b> <span class="small">score ${p.score}</span> <span class="small">${reason}</span></div>`);
+    });
+    parts.push(`</div>`);
+    if (rec.tips.length) {
+      parts.push(`<div style="margin-top:10px;"><span class="pill">ひとこと</span></div>`);
+      parts.push(`<ul style="margin:6px 0 0; padding-left: 18px;">`);
+      rec.tips.forEach(t => parts.push(`<li class="small">${escapeHtml(t)}</li>`));
+      parts.push(`</ul>`);
+    }
+    return parts.join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  // -------- DOM --------
+  const $ = (id) => document.getElementById(id);
+
+  function getEntryFromForm() {
+    return {
+      id: uid(),
+      date: $("date").value || nowLocalDatetimeValue(),
+      season: $("season").value,
+      temp: safeParseNum($("temp").value),
+      condition: $("condition").value,
+      brand: $("brand").value.trim(),
+      style: $("style").value,
+      abv: safeParseNum($("abv").value),
+      ibu: safeParseNum($("ibu").value),
+      rating: safeParseNum($("rating").value) ?? 7,
+      impression: $("impression").value.trim(),
+      memo: $("memo").value.trim()
+    };
+  }
+
+  function setDefaultForm() {
+    $("date").value = nowLocalDatetimeValue();
+    // season default based on month
+    const m = new Date().getMonth() + 1;
+    const season =
+      (m >= 3 && m <= 5) ? "春" :
+      (m >= 6 && m <= 8) ? "夏" :
+      (m >= 9 && m <= 11) ? "秋" : "冬";
+    $("season").value = season;
+    $("temp").value = "";
+    $("condition").value = "普通";
+    $("brand").value = "";
+    $("style").value = "ラガー";
+    $("abv").value = "";
+    $("ibu").value = "";
+    $("rating").value = 7;
+    $("impression").value = "";
+    $("memo").value = "";
+    hideFeedback();
+  }
+
+  function showFeedback(html) {
+    $("feedbackBox").innerHTML = html;
+    $("feedbackBox").style.display = "block";
+  }
+  function hideFeedback() {
+    $("feedbackBox").style.display = "none";
+    $("feedbackBox").innerHTML = "";
+  }
+
+  function computeStats(arr) {
+    const total = arr.length;
+    const bySeason = new Map();
+    const byStyle = new Map();
+    for (const e of arr) {
+      bySeason.set(e.season, (bySeason.get(e.season) || 0) + 1);
+      byStyle.set(e.style, (byStyle.get(e.style) || 0) + 1);
+    }
+    const seasonTags = Array.from(bySeason.entries()).sort((a,b)=>b[1]-a[1]).map(([k,v]) => `<span class="tag">${escapeHtml(k)}: ${v}</span>`).join("");
+    const styleTags = Array.from(byStyle.entries()).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v]) => `<span class="tag">${escapeHtml(k)}: ${v}</span>`).join("");
+    return { total, seasonTags, styleTags };
+  }
+
+  function render() {
+    const q = $("q").value.trim().toLowerCase();
+    const sort = $("sort").value;
+
+    let arr = loadAll();
+
+    if (q) {
+      arr = arr.filter(e => {
+        const hay = `${e.brand || ""} ${e.style || ""} ${e.impression || ""} ${e.memo || ""}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
+
+    if (sort === "new") arr.sort((a,b) => (b.date || "").localeCompare(a.date || ""));
+    if (sort === "old") arr.sort((a,b) => (a.date || "").localeCompare(b.date || ""));
+    if (sort === "rating") arr.sort((a,b) => (b.rating ?? 0) - (a.rating ?? 0));
+
+    const stats = computeStats(loadAll());
+    $("stats").innerHTML = `
+      <div class="small">総記録: <b>${stats.total}</b></div>
+      <div style="margin-top:6px;">${stats.seasonTags}</div>
+      <div style="margin-top:6px;">${stats.styleTags}</div>
+    `;
+
+    const tbody = $("list");
+    tbody.innerHTML = "";
+
+    if (arr.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">まだ記録ないで。保存してみ。</td></tr>`;
+      return;
+    }
+
+    for (const e of arr) {
+      const rec = recommend(e);
+      const picks = rec.picks.map(p => `<span class="tag">${escapeHtml(p.name)}</span>`).join("");
+      const env = [
+        e.season ? `<span class="tag">${escapeHtml(e.season)}</span>` : "",
+        (e.temp !== null) ? `<span class="tag">${escapeHtml(e.temp)}℃</span>` : "",
+        e.condition ? `<span class="tag">${escapeHtml(e.condition)}</span>` : "",
+        (e.abv !== null) ? `<span class="tag">ABV ${escapeHtml(e.abv)}%</span>` : "",
+        (e.ibu !== null) ? `<span class="tag">IBU ${escapeHtml(e.ibu)}</span>` : "",
+        (e.rating !== null) ? `<span class="tag">満足 ${escapeHtml(e.rating)}/10</span>` : ""
+      ].join("");
+
+      const beer = `${e.brand ? escapeHtml(e.brand) : "<span class='muted'>銘柄なし</span>"}<div class="small">${escapeHtml(e.style || "")}</div>`;
+
+      const impression = `
+        <div>${escapeHtml(e.impression || "")}</div>
+        ${e.memo ? `<div class="small" style="margin-top:6px;">${escapeHtml(e.memo)}</div>` : ""}
+      `;
+
+      const dateStr = e.date ? escapeHtml(e.date.replace("T", " ")) : "";
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mono">${dateStr}</td>
+        <td>${beer}</td>
+        <td>${env}</td>
+        <td>${impression}</td>
+        <td>${picks}</td>
+        <td class="right">
+          <button class="secondary" data-act="show" data-id="${e.id}">詳細</button>
+          <button class="danger" data-act="del" data-id="${e.id}">削除</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // -------- Events --------
+  $("saveBtn").addEventListener("click", () => {
+    const entry = getEntryFromForm();
+    if (!entry.impression && !entry.memo && !entry.brand) {
+      showFeedback(`<b>ツッコミ:</b> 何も書いてへんやん。せめて感想か銘柄、どっちか入れてから保存し。`);
+      return;
+    }
+    const rec = recommend(entry);
+    const all = loadAll();
+    all.push({ ...entry, rec }); // store rec snapshot too (optional)
+    saveAll(all);
+    showFeedback(formatFeedback(entry, rec));
+    render();
+  });
+
+  $("previewBtn").addEventListener("click", () => {
+    const entry = getEntryFromForm();
+    const rec = recommend(entry);
+    showFeedback(formatFeedback(entry, rec));
+  });
+
+  $("resetBtn").addEventListener("click", () => setDefaultForm());
+
+  $("q").addEventListener("input", render);
+  $("sort").addEventListener("change", render);
+
+  $("list").addEventListener("click", (ev) => {
+    const btn = ev.target.closest("button");
+    if (!btn) return;
+    const act = btn.dataset.act;
+    const id = btn.dataset.id;
+    const all = loadAll();
+    const idx = all.findIndex(e => e.id === id);
+    if (idx === -1) return;
+
+    if (act === "del") {
+      all.splice(idx, 1);
+      saveAll(all);
+      render();
+      return;
+    }
+    if (act === "show") {
+      const e = all[idx];
+      const rec = e.rec || recommend(e);
+      const detail = `
+        <div><b>銘柄:</b> ${escapeHtml(e.brand || "（なし）")} / <b>スタイル:</b> ${escapeHtml(e.style || "")}</div>
+        <div class="small" style="margin-top:6px;">
+          ${escapeHtml(e.season || "")} ${(e.temp !== null) ? `${escapeHtml(e.temp)}℃` : ""} / ${escapeHtml(e.condition || "")}
+          ${(e.abv !== null) ? ` / ABV ${escapeHtml(e.abv)}%` : ""}
+          ${(e.ibu !== null) ? ` / IBU ${escapeHtml(e.ibu)}` : ""}
+          ${(e.rating !== null) ? ` / 満足 ${escapeHtml(e.rating)}/10` : ""}
+        </div>
+        <div style="margin-top:10px;"><b>感想</b><div>${escapeHtml(e.impression || "")}</div></div>
+        <div style="margin-top:10px;"><b>メモ</b><div>${escapeHtml(e.memo || "")}</div></div>
+        <div style="margin-top:12px;">${formatFeedback(e, rec)}</div>
+      `;
+      showFeedback(detail);
+    }
+  });
+
+  $("clearBtn").addEventListener("click", () => {
+    const ok = confirm("全削除するで？ほんまに？");
+    if (!ok) return;
+    saveAll([]);
+    render();
+    hideFeedback();
+  });
+
+  $("exportBtn").addEventListener("click", () => {
+    const data = loadAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "beer_memo_export.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+
+  $("importFile").addEventListener("change", async (ev) => {
+    const file = ev.target.files?.[0];
+    ev.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const arr = JSON.parse(text);
+      if (!Array.isArray(arr)) throw new Error("JSONが配列ちゃう");
+      // Basic sanitize
+      const cleaned = arr.map(e => ({
+        id: e.id || uid(),
+        date: e.date || nowLocalDatetimeValue(),
+        season: e.season || "不明",
+        temp: (e.temp === null || e.temp === undefined) ? null : Number(e.temp),
+        condition: e.condition || "普通",
+        brand: (e.brand || "").toString(),
+        style: e.style || "不明",
+        abv: (e.abv === null || e.abv === undefined) ? null : Number(e.abv),
+        ibu: (e.ibu === null || e.ibu === undefined) ? null : Number(e.ibu),
+        rating: (e.rating === null || e.rating === undefined) ? 7 : Number(e.rating),
+        impression: (e.impression || "").toString(),
+        memo: (e.memo || "").toString(),
+        rec: e.rec || null
+      }));
+      const merged = loadAll().concat(cleaned);
+      saveAll(merged);
+      render();
+      showFeedback(`<b>インポート完了。</b> まあまあやるやん。記録増えたで。`);
+    } catch (err) {
+      showFeedback(`<b>インポート失敗。</b> JSON壊れてるか形式ちゃうかも。`);
+    }
+  });
+
+  // init
+  setDefaultForm();
+  render();
+</script>
+</body>
+</html>
