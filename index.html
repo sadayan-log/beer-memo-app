@@ -151,7 +151,7 @@
 
       <div class="row">
         <div>
-          <label>検索（銘柄/感想/メモ）</label>
+          <label>自由検索（銘柄/感想/メモ）</label>
           <input id="q" type="text" placeholder="例: 唐揚げ / IPA / 柑橘" />
         </div>
         <div>
@@ -161,6 +161,35 @@
             <option value="old">古い順</option>
             <option value="rating">満足度が高い順</option>
           </select>
+        </div>
+      </div>
+
+      <div class="row3" style="margin-top:10px;">
+        <div>
+          <label>ビール名で絞り込み</label>
+          <input id="brandFilter" type="text" placeholder="例: よなよな" />
+        </div>
+        <div>
+          <label>スタイルで絞り込み</label>
+          <select id="styleFilter">
+            <option value="">すべて</option>
+            <option value="ラガー">ラガー</option>
+            <option value="ピルスナー">ピルスナー</option>
+            <option value="IPA">IPA</option>
+            <option value="ペールエール">ペールエール</option>
+            <option value="ヴァイツェン">ヴァイツェン</option>
+            <option value="スタウト">スタウト</option>
+            <option value="サワー">サワー</option>
+            <option value="ベルジャン">ベルジャン</option>
+            <option value="不明">不明</option>
+          </select>
+        </div>
+        <div>
+          <label>ABVで絞り込み</label>
+          <div class="row" style="gap:8px;">
+            <input id="abvMinFilter" type="number" min="0" max="20" step="0.1" placeholder="以上" />
+            <input id="abvMaxFilter" type="number" min="0" max="20" step="0.1" placeholder="以下" />
+          </div>
         </div>
       </div>
 
@@ -445,6 +474,10 @@
   function render() {
     const q = $("q").value.trim().toLowerCase();
     const sort = $("sort").value;
+    const brandFilter = $("brandFilter").value.trim().toLowerCase();
+    const styleFilter = $("styleFilter").value;
+    const abvMinFilter = safeParseNum($("abvMinFilter").value);
+    const abvMaxFilter = safeParseNum($("abvMaxFilter").value);
 
     let arr = loadAll();
 
@@ -453,6 +486,22 @@
         const hay = `${e.brand || ""} ${e.style || ""} ${e.impression || ""} ${e.memo || ""}`.toLowerCase();
         return hay.includes(q);
       });
+    }
+
+    if (brandFilter) {
+      arr = arr.filter(e => (e.brand || "").toLowerCase().includes(brandFilter));
+    }
+
+    if (styleFilter) {
+      arr = arr.filter(e => e.style === styleFilter);
+    }
+
+    if (abvMinFilter !== null) {
+      arr = arr.filter(e => e.abv !== null && e.abv !== undefined && Number(e.abv) >= abvMinFilter);
+    }
+
+    if (abvMaxFilter !== null) {
+      arr = arr.filter(e => e.abv !== null && e.abv !== undefined && Number(e.abv) <= abvMaxFilter);
     }
 
     if (sort === "new") arr.sort((a,b) => (b.date || "").localeCompare(a.date || ""));
@@ -535,6 +584,10 @@
   $("resetBtn").addEventListener("click", () => setDefaultForm());
 
   $("q").addEventListener("input", render);
+  $("brandFilter").addEventListener("input", render);
+  $("styleFilter").addEventListener("change", render);
+  $("abvMinFilter").addEventListener("input", render);
+  $("abvMaxFilter").addEventListener("input", render);
   $("sort").addEventListener("change", render);
 
   $("list").addEventListener("click", (ev) => {
